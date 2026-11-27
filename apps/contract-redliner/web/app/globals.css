@@ -4,17 +4,87 @@
 
 :root {
   color-scheme: light;
+  --grid: rgba(27, 32, 41, 0.055);
 }
 
-html,
-body {
-  height: 100%;
+* {
+  border-color: theme("colors.ink.200");
+}
+
+html {
+  scroll-behavior: smooth;
+  -webkit-tap-highlight-color: transparent;
 }
 
 body {
   @apply bg-ink-50 text-ink-900 antialiased;
+  background-image:
+    radial-gradient(60rem 40rem at 85% -10%, rgba(51, 99, 255, 0.07), transparent 60%),
+    radial-gradient(50rem 35rem at 0% 100%, rgba(16, 185, 129, 0.05), transparent 55%);
+  background-attachment: fixed;
+  text-rendering: optimizeLegibility;
 }
 
 ::selection {
   @apply bg-brand-100 text-brand-900;
+}
+
+:focus-visible {
+  outline: 2px solid theme("colors.brand.500");
+  outline-offset: 2px;
+}
+
+button:not(:disabled),
+[role="button"]:not(:disabled) {
+  cursor: pointer;
+}
+
+*::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+*::-webkit-scrollbar-thumb {
+  @apply rounded-full bg-ink-200;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  @apply bg-ink-300;
+}
+
+@layer utilities {
+  .glass {
+    @apply border border-white/60 bg-white/80 backdrop-blur-xl;
+  }
+
+  .text-balance {
+    text-wrap: balance;
+  }
+
+  .grid-bg {
+    background-image:
+      linear-gradient(to right, var(--grid) 1px, transparent 1px),
+      linear-gradient(to bottom, var(--grid) 1px, transparent 1px);
+    background-size: 32px 32px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
 }

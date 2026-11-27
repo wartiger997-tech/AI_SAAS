@@ -143,6 +143,52 @@ Observability (Langfuse/OTel, Prometheus, Grafana) is behind a compose profile:
 docker compose -f infra/docker-compose.yml --profile observability up -d otel-collector prometheus grafana
 ```
 
+## Deployment — Vercel + Render
+
+The frontend deploys to Vercel; both APIs, workers, the LiveKit agent, Postgres,
+and Redis deploy to Render from the root `render.yaml` Blueprint.
+
+### 1. Render (backend)
+
+1. Push the repo to GitHub.
+2. In Render: **New → Blueprint** → select the repo.
+3. Fill in every `sync: false` secret (Twilio, LiveKit, Deepgram, ElevenLabs,
+   OpenAI, S3/R2, Langfuse).
+4. The Blueprint creates:
+   - `clauseguard-api` + `clauseguard-worker` + `clauseguard-db` + Redis
+   - `relay-api` + `relay-worker` + `relay-agent` + `relay-db` + Redis
+5. `initialDeployHook` runs `alembic upgrade head` for both APIs.
+
+### 2. Vercel (frontend)
+
+**Option A — recommended:** import the repo, set **Root Directory** to
+`apps/contract-redliner/web`. Vercel detects Next.js and uses
+`apps/contract-redliner/web/vercel.json`.
+
+**Option B — repo root:** the root `vercel.json` builds the web app from the
+monorepo root.
+
+Set these environment variables in Vercel:
+
+| Variable | Value |
+|---|---|
+| `NEXT_PUBLIC_API_URL` | `https://clauseguard-api.onrender.com` |
+| `NEXT_PUBLIC_SITE_URL` | `https://clauseguard-web.vercel.app` |
+
+Then set `CORS_ORIGINS` on the Render `clauseguard-api` service to the Vercel
+URL and redeploy. `NEXT_PUBLIC_*` values are inlined at build time, so changing
+them requires a Vercel redeploy.
+
+### 3. Post-deploy checklist
+
+- `GET /healthz` and `/readyz` return `ok` on both APIs.
+- Render Postgres has the `vector` extension (ClauseGuard migration creates it).
+- S3/R2 bucket exists and credentials can read/write.
+- Twilio webhook URLs point at `https://relay-api.onrender.com/v1/webhooks/twilio/...`.
+- LiveKit SIP trunk points at the Relay agent worker.
+- Vercel preview deployments get their own `NEXT_PUBLIC_API_URL` if you want
+  isolated API environments.
+
 ## License
 
 Apache-2.0 (see `LICENSE`).

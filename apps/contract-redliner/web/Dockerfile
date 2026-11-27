@@ -17,9 +17,11 @@ ENV NODE_ENV=production \
     PORT=3000
 RUN addgroup --system --gid 1001 nodejs \
     && adduser --system --uid 1001 nextjs
+COPY package.json package-lock.json* ./
+RUN npm install --omit=dev --no-audit --no-fund
+COPY --from=builder /app/.next ./.next
 COPY --from=builder /app/public ./public
-COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
-COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
+COPY --from=builder /app/next.config.mjs ./next.config.mjs
 USER nextjs
 EXPOSE 3000
-CMD ["node", "server.js"]
+CMD ["sh", "-c", "npx next start --port ${PORT:-3000}"]

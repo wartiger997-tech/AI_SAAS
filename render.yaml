@@ -1,0 +1,284 @@
+# Render Blueprint — ClauseGuard + Relay
+#
+# Deploy:
+#   1. Push this repo to GitHub.
+#   2. In Render, choose "New" -> "Blueprint" and select the repo.
+#   3. Fill in the `sync: false` secrets in the dashboard.
+#   4. Point Vercel's NEXT_PUBLIC_API_URL at the ClauseGuard API URL below.
+#
+# The two APIs are web services; arq workers and the LiveKit agent are
+# background workers. Postgres and Key Value (Redis) are managed datastores.
+
+services:
+  # ---------------------------------------------------------------- ClauseGuard
+  - type: web
+    name: clauseguard-api
+    runtime: docker
+    rootDir: apps/contract-redliner/api
+    dockerfilePath: Dockerfile
+    plan: starter
+    region: oregon
+    healthCheckPath: /healthz
+    autoDeploy: true
+    preDeployCommand: alembic upgrade head
+    envVars:
+      - key: ENV
+        value: prod
+      - key: LOG_JSON
+        value: "true"
+      - key: LOG_LEVEL
+        value: INFO
+      - key: DATABASE_URL
+        fromDatabase:
+          name: clauseguard-db
+          property: connectionString
+      - key: REDIS_URL
+        fromService:
+          name: clauseguard-redis
+          type: keyvalue
+          property: connectionString
+      - key: JWT_SECRET
+        generateValue: true
+      - key: INTERNAL_API_TOKEN
+        generateValue: true
+      - key: STORAGE_BACKEND
+        value: s3
+      - key: S3_BUCKET
+        sync: false
+      - key: S3_REGION
+        value: us-east-1
+      - key: S3_ENDPOINT_URL
+        sync: false
+      - key: AWS_ACCESS_KEY_ID
+        sync: false
+      - key: AWS_SECRET_ACCESS_KEY
+        sync: false
+      - key: LLM_PROVIDER
+        value: openai
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: OPENAI_MODEL
+        value: gpt-4.1-mini
+      - key: PDF_PROVIDER
+        value: local
+      - key: CORS_ORIGINS
+        value: https://clauseguard-web.vercel.app
+      - key: LANGFUSE_PUBLIC_KEY
+        sync: false
+      - key: LANGFUSE_SECRET_KEY
+        sync: false
+
+  - type: worker
+    name: clauseguard-worker
+    runtime: docker
+    rootDir: apps/contract-redliner/api
+    dockerfilePath: Dockerfile
+    dockerCommand: arq redliner.services.jobs.WorkerSettings
+    plan: starter
+    region: oregon
+    autoDeploy: true
+    envVars:
+      - key: ENV
+        value: prod
+      - key: DATABASE_URL
+        fromDatabase:
+          name: clauseguard-db
+          property: connectionString
+      - key: REDIS_URL
+        fromService:
+          name: clauseguard-redis
+          type: keyvalue
+          property: connectionString
+      - key: STORAGE_BACKEND
+        value: s3
+      - key: S3_BUCKET
+        sync: false
+      - key: S3_REGION
+        value: us-east-1
+      - key: S3_ENDPOINT_URL
+        sync: false
+      - key: AWS_ACCESS_KEY_ID
+        sync: false
+      - key: AWS_SECRET_ACCESS_KEY
+        sync: false
+      - key: OPENAI_API_KEY
+        sync: false
+
+  # ---------------------------------------------------------------- Relay
+  - type: web
+    name: relay-api
+    runtime: docker
+    rootDir: apps/voice-receptionist/api
+    dockerfilePath: Dockerfile
+    plan: starter
+    region: oregon
+    healthCheckPath: /healthz
+    autoDeploy: true
+    preDeployCommand: alembic upgrade head
+    envVars:
+      - key: ENV
+        value: prod
+      - key: PORT
+        value: "8001"
+      - key: LOG_JSON
+        value: "true"
+      - key: DATABASE_URL
+        fromDatabase:
+          name: relay-db
+          property: connectionString
+      - key: REDIS_URL
+        fromService:
+          name: relay-redis
+          type: keyvalue
+          property: connectionString
+      - key: JWT_SECRET
+        generateValue: true
+      - key: INTERNAL_API_TOKEN
+        generateValue: true
+      - key: TWILIO_ACCOUNT_SID
+        sync: false
+      - key: TWILIO_AUTH_TOKEN
+        sync: false
+      - key: TWILIO_FROM_NUMBER
+        sync: false
+      - key: LIVEKIT_URL
+        sync: false
+      - key: LIVEKIT_API_KEY
+        sync: false
+      - key: LIVEKIT_API_SECRET
+        sync: false
+      - key: LIVEKIT_SIP_URI
+        sync: false
+      - key: DEEPGRAM_API_KEY
+        sync: false
+      - key: ELEVENLABS_API_KEY
+        sync: false
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: STORAGE_BACKEND
+        value: s3
+      - key: S3_BUCKET
+        sync: false
+      - key: S3_REGION
+        value: us-east-1
+      - key: S3_ENDPOINT_URL
+        sync: false
+      - key: AWS_ACCESS_KEY_ID
+        sync: false
+      - key: AWS_SECRET_ACCESS_KEY
+        sync: false
+      - key: BOOKING_LINK_BASE_URL
+        value: https://relay-api.onrender.com
+      - key: CORS_ORIGINS
+        value: https://clauseguard-web.vercel.app
+      - key: LANGFUSE_PUBLIC_KEY
+        sync: false
+      - key: LANGFUSE_SECRET_KEY
+        sync: false
+
+  - type: worker
+    name: relay-worker
+    runtime: docker
+    rootDir: apps/voice-receptionist/api
+    dockerfilePath: Dockerfile
+    dockerCommand: arq voice_api.services.jobs.WorkerSettings
+    plan: starter
+    region: oregon
+    autoDeploy: true
+    envVars:
+      - key: ENV
+        value: prod
+      - key: DATABASE_URL
+        fromDatabase:
+          name: relay-db
+          property: connectionString
+      - key: REDIS_URL
+        fromService:
+          name: relay-redis
+          type: keyvalue
+          property: connectionString
+      - key: INTERNAL_API_TOKEN
+        generateValue: true
+      - key: TWILIO_ACCOUNT_SID
+        sync: false
+      - key: TWILIO_AUTH_TOKEN
+        sync: false
+      - key: TWILIO_FROM_NUMBER
+        sync: false
+      - key: BOOKING_LINK_BASE_URL
+        value: https://relay-api.onrender.com
+      - key: OPENAI_API_KEY
+        sync: false
+
+  - type: worker
+    name: relay-agent
+    runtime: docker
+    rootDir: apps/voice-receptionist/agent
+    dockerfilePath: Dockerfile
+    plan: starter
+    region: oregon
+    autoDeploy: true
+    envVars:
+      - key: LIVEKIT_URL
+        sync: false
+      - key: LIVEKIT_API_KEY
+        sync: false
+      - key: LIVEKIT_API_SECRET
+        sync: false
+      - key: DEEPGRAM_API_KEY
+        sync: false
+      - key: ELEVENLABS_API_KEY
+        sync: false
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: CONTROL_PLANE_URL
+        value: http://relay-api:8001
+      - key: INTERNAL_API_TOKEN
+        fromService:
+          name: relay-api
+          type: web
+          envVarKey: INTERNAL_API_TOKEN
+      - key: RELAY_BUSINESS_ID
+        sync: false
+      - key: AGENT_NAME
+        value: relay-receptionist
+
+  # ---------------------------------------------------------------- Datastores
+  - type: keyvalue
+    name: clauseguard-redis
+    plan: free
+    region: oregon
+    maxmemoryPolicy: noeviction
+    ipAllowList:
+      - source: 0.0.0.0/0
+        description: Render services
+
+  - type: keyvalue
+    name: relay-redis
+    plan: free
+    region: oregon
+    maxmemoryPolicy: noeviction
+    ipAllowList:
+      - source: 0.0.0.0/0
+        description: Render services
+
+databases:
+  - name: clauseguard-db
+    databaseName: clauseguard
+    user: clauseguard
+    plan: 0.5c-1g
+    region: oregon
+    postgresMajorVersion: "16"
+    ipAllowList:
+      - source: 0.0.0.0/0
+        description: Render services
+
+  - name: relay-db
+    databaseName: relay
+    user: relay
+    plan: 0.5c-1g
+    region: oregon
+    postgresMajorVersion: "16"
+    ipAllowList:
+      - source: 0.0.0.0/0
+        description: Render services
