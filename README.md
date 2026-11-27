@@ -152,7 +152,7 @@ daemon with a private service binding.
 
 ### Vercel (recommended)
 
-Import the repo and set **Root Directory = `apps`**. `apps/vercel.json` defines:
+Import the repo with the default root (the repository root). `vercel.json` defines:
 
 | Service | Type | Public path | Notes |
 |---|---|---|---|
