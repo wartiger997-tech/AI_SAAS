@@ -11,7 +11,7 @@ import type {
 } from "./types";
 
 const TOKEN_KEY = "clauseguard.token";
-const API_URL = (process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000").replace(/\/$/, "");
+const API_URL = (process.env.NEXT_PUBLIC_API_URL || "/api/clause").replace(/\/$/, "");
 
 export class ApiError extends Error {
   constructor(
@@ -48,7 +48,16 @@ async function request<T>(
     const token = getToken();
     if (token) headers.set("Authorization", `Bearer ${token}`);
   }
-  const response = await fetch(`${API_URL}${path}`, { ...init, headers, cache: "no-store" });
+  let response: Response;
+  try {
+    response = await fetch(`${API_URL}${path}`, { ...init, headers, cache: "no-store" });
+  } catch (err) {
+    throw new ApiError(
+      `Cannot reach the API at ${API_URL}. Check that the API service is deployed and NEXT_PUBLIC_API_URL is correct.`,
+      0,
+      err,
+    );
+  }
   if (!response.ok) {
     let detail: unknown = null;
     try {
@@ -161,14 +170,19 @@ export const api = {
 
   async exportUrl(reviewId: string, format: "docx" | "pdf" | "md" | "json"): Promise<void> {
     const token = getToken();
-    const response = await fetch(`${API_URL}/v1/reviews/${reviewId}/export`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        ...(token ? { Authorization: `Bearer ${token}` } : {}),
-      },
-      body: JSON.stringify({ format, include_dismissed: false }),
-    });
+    let response: Response;
+    try {
+      response = await fetch(`${API_URL}/v1/reviews/${reviewId}/export`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify({ format, include_dismissed: false }),
+      });
+    } catch (err) {
+      throw new ApiError(`Cannot reach the API at ${API_URL}.`, 0, err);
+    }
     if (!response.ok) throw new ApiError(`Export failed (${response.status})`, response.status);
     const blob = await response.blob();
     const url = URL.createObjectURL(blob);

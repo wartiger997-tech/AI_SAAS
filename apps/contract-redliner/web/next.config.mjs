@@ -6,7 +6,18 @@ const nextConfig = {
     optimizePackageImports: ["framer-motion", "@react-three/drei", "three"],
   },
   env: {
-    NEXT_PUBLIC_API_URL: process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000",
+    NEXT_PUBLIC_API_URL: process.env.NEXT_PUBLIC_API_URL || "/api/clause",
+  },
+  async rewrites() {
+    if (process.env.NODE_ENV === "development" && !process.env.NEXT_PUBLIC_API_URL) {
+      return [
+        {
+          source: "/api/clause/:path*",
+          destination: "http://localhost:8000/api/clause/:path*",
+        },
+      ];
+    }
+    return [];
   },
   async headers() {
     return [
