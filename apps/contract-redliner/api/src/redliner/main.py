@@ -89,7 +89,7 @@ def create_app() -> FastAPI:
         response.headers.setdefault("Referrer-Policy", "strict-origin-when-cross-origin")
         return response
 
-    @app.exception_handler((ConnectionRefusedError, TimeoutError, OSError))
+    @app.exception_handler(OSError)
     async def dependency_unavailable(request: Request, exc: OSError):
         logger.error(
             "dependency.unavailable",
