@@ -1,0 +1,46 @@
+# Dependencies
+node_modules/
+.pnp
+.pnp.js
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.coverage
+htmlcov/
+
+# Builds
+.next/
+out/
+dist/
+build/
+*.tsbuildinfo
+next-env.d.ts
+
+# Env / secrets
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# Local data
+.data/
+uploads/
+storage/
+*.sqlite3
+
+# Editors / OS
+.DS_Store
+.idea/
+.vscode/
+
+# Roadmap / planning docs are intentionally local-only
+docs/roadmaps/
+
+# Logs
+*.log

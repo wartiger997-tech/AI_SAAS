@@ -1,0 +1,226 @@
+name: relay-clauseguard
+
+x-app-env: &app-env
+  ENV: dev
+  LOG_JSON: "true"
+  LOG_LEVEL: INFO
+  DATABASE_URL: postgresql+asyncpg://redliner:redliner@postgres:5432/redliner
+  REDIS_URL: redis://redis:6379/0
+  JWT_SECRET: dev-only-change-me-0123456789
+  INTERNAL_API_TOKEN: dev-internal-token
+  STORAGE_BACKEND: s3
+  S3_BUCKET: redliner
+  S3_REGION: us-east-1
+  S3_ENDPOINT_URL: http://minio:9000
+  AWS_ACCESS_KEY_ID: minioadmin
+  AWS_SECRET_ACCESS_KEY: minioadmin
+  CORS_ORIGINS: http://localhost:3000
+
+services:
+  postgres:
+    image: pgvector/pgvector:pg16
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ./postgres/init.sql:/docker-entrypoint-initdb.d/10-init.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  redis:
+    image: redis:7-alpine
+    command: ["redis-server", "--appendonly", "yes"]
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  minio:
+    image: minio/minio:latest
+    command: ["server", "/data", "--console-address", ":9001"]
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - minio-data:/data
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:9000/minio/health/live || exit 1"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  minio-init:
+    image: minio/mc:latest
+    depends_on:
+      minio:
+        condition: service_healthy
+    entrypoint: >
+      /bin/sh -c "
+      mc alias set local http://minio:9000 minioadmin minioadmin &&
+      mc mb --ignore-existing local/redliner &&
+      mc mb --ignore-existing local/relay &&
+      echo 'buckets ready'
+      "
+    restart: "no"
+
+  clause-api:
+    build:
+      context: ./apps/contract-redliner/api
+    environment:
+      <<: *app-env
+      DATABASE_URL: postgresql+asyncpg://redliner:redliner@postgres:5432/redliner
+      REDIS_URL: redis://redis:6379/0
+    ports:
+      - "8000:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+
+  clause-worker:
+    build:
+      context: ./apps/contract-redliner/api
+    command: ["arq", "redliner.services.jobs.WorkerSettings"]
+    environment:
+      <<: *app-env
+      DATABASE_URL: postgresql+asyncpg://redliner:redliner@postgres:5432/redliner
+      REDIS_URL: redis://redis:6379/0
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  clause-web:
+    build:
+      context: ./apps/contract-redliner/web
+    environment:
+      NEXT_PUBLIC_API_URL: http://localhost:8000
+    ports:
+      - "3000:3000"
+    depends_on:
+      - clause-api
+
+  relay-api:
+    build:
+      context: ./apps/voice-receptionist/api
+    environment:
+      ENV: dev
+      LOG_JSON: "true"
+      DATABASE_URL: postgresql+asyncpg://relay:relay@postgres:5432/relay
+      REDIS_URL: redis://redis:6379/1
+      JWT_SECRET: dev-only-change-me-0123456789
+      INTERNAL_API_TOKEN: dev-internal-token
+      STORAGE_BACKEND: s3
+      S3_BUCKET: relay
+      S3_REGION: us-east-1
+      S3_ENDPOINT_URL: http://minio:9000
+      AWS_ACCESS_KEY_ID: minioadmin
+      AWS_SECRET_ACCESS_KEY: minioadmin
+      BOOKING_LINK_BASE_URL: http://localhost:8001
+      CORS_ORIGINS: http://localhost:3000
+    ports:
+      - "8001:8001"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+
+  relay-worker:
+    build:
+      context: ./apps/voice-receptionist/api
+    command: ["arq", "voice_api.services.jobs.WorkerSettings"]
+    environment:
+      DATABASE_URL: postgresql+asyncpg://relay:relay@postgres:5432/relay
+      REDIS_URL: redis://redis:6379/1
+      INTERNAL_API_TOKEN: dev-internal-token
+      BOOKING_LINK_BASE_URL: http://localhost:8001
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  relay-agent:
+    build:
+      context: ./apps/voice-receptionist/agent
+    environment:
+      LIVEKIT_URL: ${LIVEKIT_URL:-wss://your-project.livekit.cloud}
+      LIVEKIT_API_KEY: ${LIVEKIT_API_KEY:-}
+      LIVEKIT_API_SECRET: ${LIVEKIT_API_SECRET:-}
+      DEEPGRAM_API_KEY: ${DEEPGRAM_API_KEY:-}
+      ELEVENLABS_API_KEY: ${ELEVENLABS_API_KEY:-}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      CONTROL_PLANE_URL: http://relay-api:8001
+      INTERNAL_API_TOKEN: dev-internal-token
+      RELAY_BUSINESS_ID: ${RELAY_BUSINESS_ID:-}
+    depends_on:
+      - relay-api
+    restart: unless-stopped
+
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:latest
+    command: ["--config=/etc/otelcol/config.yaml"]
+    volumes:
+      - ./observability/otel-collector.yaml:/etc/otelcol/config.yaml:ro
+    ports:
+      - "4317:4317"
+      - "4318:4318"
+      - "8889:8889"
+    profiles: ["observability"]
+
+  prometheus:
+    image: prom/prometheus:latest
+    volumes:
+      - ./observability/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+    ports:
+      - "9090:9090"
+    profiles: ["observability"]
+
+  grafana:
+    image: grafana/grafana:latest
+    environment:
+      GF_SECURITY_ADMIN_PASSWORD: admin
+    volumes:
+      - ./observability/grafana-datasources.yml:/etc/grafana/provisioning/datasources/datasources.yml:ro
+    ports:
+      - "3001:3000"
+    profiles: ["observability"]
+
+  postgres-exporter:
+    image: prometheuscommunity/postgres-exporter:latest
+    environment:
+      DATA_SOURCE_NAME: postgresql://postgres:postgres@postgres:5432/postgres?sslmode=disable
+    profiles: ["observability"]
+
+  redis-exporter:
+    image: oliver006/redis_exporter:latest
+    environment:
+      REDIS_ADDR: redis://redis:6379
+    profiles: ["observability"]
+
+volumes:
+  postgres-data:
+  redis-data:
+  minio-data:

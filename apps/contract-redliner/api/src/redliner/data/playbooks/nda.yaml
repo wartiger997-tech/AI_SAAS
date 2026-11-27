@@ -1,0 +1,95 @@
+name: Mutual NDA Standard
+version: 1
+description: Standard mutual non-disclosure agreement playbook.
+rules:
+  - id: nda_mutual
+    title: One-way confidentiality
+    category: confidentiality
+    severity: high
+    description: The NDA protects only one party's information.
+    patterns: ["confidential information", "disclosing party", "receiving party"]
+    must_include: ["mutual", "each party", "both parties"]
+    market_standard: Mutual obligations
+    guidance: Make confidentiality mutual unless the deal is genuinely one-way.
+    suggested_text: "Each party may disclose Confidential Information to the other, and each party shall protect the other's Confidential Information under this Agreement."
+    redline_strategy: replace
+    applies_to: [nda]
+    weight: 1.4
+  - id: nda_definition_broad
+    title: Overbroad definition of confidential information
+    category: confidentiality
+    severity: medium
+    description: Definition covers all information rather than marked or reasonably understood confidential information.
+    patterns: ["confidential information", "all information", "non-public information"]
+    must_include: ["marked", "reasonably understood", "written", "designated"]
+    market_standard: Marked or reasonably understood as confidential
+    guidance: Narrow the definition and add standard exclusions.
+    suggested_text: "'Confidential Information' means information marked confidential or that a reasonable person would understand to be confidential."
+    redline_strategy: replace
+    applies_to: [nda]
+    weight: 1.1
+  - id: nda_term_long
+    title: Excessive confidentiality term
+    category: confidentiality
+    severity: medium
+    description: Confidentiality obligations exceed five years (except trade secrets).
+    patterns: ["term", "surviv", "years", "confidentiality.{0,30}period"]
+    must_include: ["3", "three", "5", "five", "trade secret"]
+    market_standard: 3 years general, indefinite for trade secrets
+    guidance: Use 3 years for general information and a trade-secret carve-out.
+    suggested_text: "Confidentiality obligations survive for three (3) years, except trade secrets remain protected for so long as they qualify."
+    redline_strategy: replace
+    applies_to: [nda]
+    weight: 1.0
+  - id: nda_residuals
+    title: Missing residuals clause
+    category: intellectual_property
+    severity: low
+    description: No residuals clause, which may expose the receiving party to claims over general knowledge.
+    patterns: ["residual", "general knowledge", "unaided memory"]
+    must_include: ["residual", "general knowledge", "memory"]
+    market_standard: Narrow residuals clause
+    guidance: Add a narrow residuals clause that excludes trade secrets and specific confidential information.
+    suggested_text: "Nothing restricts either party from using general knowledge retained in unaided memory, provided it does not include the other party's trade secrets."
+    redline_strategy: insert_after
+    applies_to: [nda]
+    weight: 0.8
+  - id: nda_non_solicit
+    title: Non-solicitation of employees
+    category: non_solicitation
+    severity: medium
+    description: Employee non-solicitation is broad or lacks a general-advertising carve-out.
+    patterns: ["solicit", "non-solicitation", "recruit"]
+    must_include: ["general advertisement", "general solicitation", "12", "twelve"]
+    market_standard: 12 months with general-advertising carve-out
+    guidance: Limit to 12 months and exclude general advertising and inbound applications.
+    suggested_text: "For twelve (12) months, neither party shall solicit the other's employees, excluding general advertisements and unsolicited applications."
+    redline_strategy: replace
+    applies_to: [nda]
+    weight: 1.0
+  - id: nda_return_destruction
+    title: Return or destruction without certification
+    category: confidentiality
+    severity: low
+    description: No requirement to return or destroy information, or no certification.
+    patterns: ["return", "destroy", "delete", "certif"]
+    must_include: ["certif", "return", "destroy"]
+    market_standard: Return or destroy on request with certification
+    guidance: Add return-or-destroy on written request, with an officer's certificate.
+    suggested_text: "Upon written request, the receiving party shall return or destroy Confidential Information and certify such destruction in writing."
+    redline_strategy: insert_after
+    applies_to: [nda]
+    weight: 0.8
+  - id: nda_injunctive
+    title: Missing injunctive relief
+    category: dispute_resolution
+    severity: low
+    description: No acknowledgment that breach may cause irreparable harm.
+    patterns: ["injunctive", "irreparable harm", "specific performance"]
+    must_include: ["injunctive", "irreparable", "specific performance"]
+    market_standard: Injunctive relief acknowledgment
+    guidance: Add a mutual injunctive-relief clause; avoid bond waivers.
+    suggested_text: "The parties acknowledge that breach may cause irreparable harm for which injunctive relief is appropriate."
+    redline_strategy: insert_after
+    applies_to: [nda]
+    weight: 0.7

@@ -1,0 +1,186 @@
+name: SaaS / MSA Standard
+version: 1
+description: Baseline playbook for customer-side review of SaaS and master service agreements.
+rules:
+  - id: liability_cap_low
+    title: Liability cap below market
+    category: liability
+    severity: high
+    description: The limitation of liability is capped below twelve months of fees.
+    patterns: ["liab", "cap on liability", "aggregate liability", "total liability"]
+    must_include: ["12", "twelve"]
+    market_standard: 12 months' fees
+    guidance: A 12-month cap is market for SaaS. Below 6 months leaves the customer under-protected.
+    suggested_text: "Liability shall not exceed the fees paid or payable in the twelve (12) months preceding the claim."
+    redline_strategy: replace
+    applies_to: [saas, msa]
+    weight: 1.4
+  - id: uncapped_indemnity
+    title: Uncapped indemnification
+    category: indemnification
+    severity: critical
+    description: Indemnification obligations are not subject to the liability cap.
+    patterns: ["indemnif", "hold harmless", "defend"]
+    must_include: ["cap", "limited", "shall not exceed"]
+    market_standard: Mutual, capped at the liability cap
+    guidance: Uncapped indemnity creates unlimited exposure. Make it mutual and subject to the cap, with standard carve-outs.
+    suggested_text: "Each party's indemnification obligations shall be subject to the limitations of liability in Section X."
+    redline_strategy: insert_after
+    applies_to: [saas, msa]
+    weight: 1.6
+  - id: unilateral_amendment
+    title: Unilateral amendment right
+    category: general
+    severity: high
+    description: The vendor may change the agreement or terms without customer consent.
+    patterns: ["may (?:amend|modify|change|update).{0,80}(?:at any time|sole discretion|without notice)", "unilateral"]
+    must_include: ["consent", "agreement", "mutual"]
+    market_standard: Mutual written amendment
+    guidance: Unilateral changes undermine the bargain. Require mutual written agreement, with a notice period for policy changes.
+    suggested_text: "This Agreement may be amended only by a written instrument signed by both parties."
+    redline_strategy: replace
+    applies_to: [saas, msa]
+    weight: 1.3
+  - id: termination_convenience
+    title: No termination for convenience
+    category: termination
+    severity: medium
+    description: Only the vendor may terminate for convenience.
+    patterns: ["terminate for convenience", "terminate.{0,40}for any reason", "termination for convenience"]
+    must_include: ["either party", "mutual", "customer may"]
+    market_standard: Mutual termination for convenience on 60-90 days' notice
+    guidance: Make termination mutual and add a 60-90 day notice period plus pro-rata refund.
+    suggested_text: "Either party may terminate this Agreement for convenience upon sixty (60) days' written notice."
+    redline_strategy: replace
+    applies_to: [saas, msa]
+    weight: 1.1
+  - id: auto_renewal_short_notice
+    title: Auto-renewal with short notice window
+    category: termination
+    severity: medium
+    description: Renewal requires notice shorter than 60 days.
+    patterns: ["automatic(?:ally)? renew", "auto-renew", "renew.{0,30}for successive"]
+    must_include: ["90", "ninety", "60", "sixty"]
+    market_standard: 90 days' notice
+    guidance: A 90-day notice window is market. Shorter windows create accidental renewals.
+    suggested_text: "Either party may prevent renewal by written notice at least ninety (90) days before the renewal term."
+    redline_strategy: replace
+    applies_to: [saas, msa]
+    weight: 1.0
+  - id: data_ownership
+    title: Customer data ownership unclear
+    category: data_protection
+    severity: high
+    description: The agreement does not clearly state that the customer owns customer data.
+    patterns: ["customer data", "data ownership", "ownership of data"]
+    must_include: ["customer owns", "customer shall own", "property of customer"]
+    market_standard: Customer owns all customer data
+    guidance: State explicitly that the customer owns customer data and grants only a limited license to process it.
+    suggested_text: "As between the parties, Customer owns all Customer Data. Vendor receives a limited license to process Customer Data solely to provide the Services."
+    redline_strategy: insert_after
+    applies_to: [saas, msa]
+    weight: 1.5
+  - id: data_export
+    title: No data export on termination
+    category: data_protection
+    severity: medium
+    description: No obligation to return or export customer data after termination.
+    patterns: ["return.{0,40}data", "export.{0,40}data", "data.{0,20}retention"]
+    must_include: ["30", "60", "90", "days"]
+    market_standard: 90-day export window in a standard format
+    guidance: Require a 90-day post-termination export window in CSV or JSON at no extra charge.
+    suggested_text: "Upon termination, Vendor shall make Customer Data available for export in CSV or JSON for ninety (90) days at no additional charge."
+    redline_strategy: insert_after
+    applies_to: [saas, msa]
+    weight: 1.0
+  - id: sla_remedies
+    title: SLA without remedies
+    category: sla
+    severity: medium
+    description: An uptime commitment exists but no service credits or termination right.
+    patterns: ["service level", "uptime", "availability", "sla"]
+    must_include: ["credit", "credits", "remedy", "terminate"]
+    market_standard: 99.9% uptime with service credits
+    guidance: Add service credits and a chronic-failure termination right.
+    suggested_text: "If monthly uptime falls below 99.9%, Customer is entitled to service credits and, after three consecutive failures, may terminate for cause."
+    redline_strategy: insert_after
+    applies_to: [saas, msa]
+    weight: 1.0
+  - id: price_increase
+    title: Uncapped price increase
+    category: payment
+    severity: medium
+    description: Renewal pricing may increase without a cap.
+    patterns: ["increase.{0,40}(?:fees|price|rates)", "price.{0,20}adjust", "uplift"]
+    must_include: ["5%", "five percent", "cpi", "cap"]
+    market_standard: CPI or 5% annual cap
+    guidance: Cap renewal increases at CPI or 5%, whichever is lower, with 90 days' notice.
+    suggested_text: "Any increase in fees at renewal shall not exceed the lesser of CPI or five percent (5%) and requires ninety (90) days' notice."
+    redline_strategy: replace
+    applies_to: [saas, msa]
+    weight: 0.9
+  - id: suspension
+    title: Unilateral suspension without notice
+    category: general
+    severity: high
+    description: Vendor may suspend service immediately and without notice.
+    patterns: ["suspend", "suspension"]
+    must_include: ["notice", "cure", "15", "30"]
+    market_standard: Notice and 30-day cure for non-payment
+    guidance: Require written notice and a cure period except for material security risk.
+    suggested_text: "Vendor may suspend the Services only after written notice and a thirty (30) day cure period, except for a material security risk."
+    redline_strategy: replace
+    applies_to: [saas, msa]
+    weight: 1.2
+  - id: governing_law_offshore
+    title: Offshore or unusual governing law
+    category: dispute_resolution
+    severity: low
+    description: Governing law is outside the customer's home jurisdiction or a known offshore venue.
+    patterns: ["governing law", "governed by the laws", "jurisdiction", "venue"]
+    must_include: ["delaware", "new york", "california", "england", "singapore"]
+    market_standard: Neutral, enforceable jurisdiction
+    guidance: Prefer a neutral jurisdiction with reliable enforcement; flag BVI/Cayman.
+    suggested_text: "This Agreement is governed by the laws of the State of Delaware, without regard to conflict-of-laws principles."
+    redline_strategy: replace
+    applies_to: [saas, msa]
+    weight: 0.8
+  - id: non_compete_broad
+    title: Overbroad non-compete
+    category: non_compete
+    severity: high
+    description: Non-compete is long, broad, or nationwide.
+    patterns: ["non-compete", "noncompete", "not compete", "competitive restriction"]
+    must_include: ["1", "2", "one", "two", "narrow", "limited"]
+    market_standard: 1-2 years, limited geography
+    guidance: Limit to 12 months and the actual competitive market; otherwise likely unenforceable.
+    suggested_text: "For twelve (12) months following termination, the restricted party shall not compete within the specific market where it provided services."
+    redline_strategy: replace
+    applies_to: [saas, msa, employment]
+    weight: 1.3
+  - id: ip_assignment_broad
+    title: Overbroad IP assignment
+    category: intellectual_property
+    severity: high
+    description: All work product or feedback is assigned to the vendor.
+    patterns: ["intellectual property", "work product", "assigns? all right", "feedback"]
+    must_include: ["customer", "excluding", "pre-existing", "background"]
+    market_standard: Narrow assignment with pre-existing IP carve-out
+    guidance: Carve out pre-existing IP, tools, and general know-how; limit feedback assignment.
+    suggested_text: "Each party retains its pre-existing intellectual property. Customer grants Vendor a non-exclusive license to use Feedback without attribution."
+    redline_strategy: replace
+    applies_to: [saas, msa]
+    weight: 1.2
+  - id: audit_broad
+    title: Overbroad audit right
+    category: audit
+    severity: low
+    description: Vendor may audit records frequently and at the customer's expense.
+    patterns: ["audit", "inspect.{0,30}(?:books|records)"]
+    must_include: ["once", "annually", "30", "notice", "customer expense"]
+    market_standard: Once annually, 30 days' notice, at auditor's expense
+    guidance: Limit to once per year, 30 days' notice, during business hours, at the auditing party's expense.
+    suggested_text: "Vendor may audit relevant records once per year upon thirty (30) days' notice, at Vendor's expense."
+    redline_strategy: replace
+    applies_to: [saas, msa]
+    weight: 0.7
