@@ -24,7 +24,7 @@ dependencies = [
   "boto3>=1.35.0",
   "python-dotenv>=1.0.1",
   "prometheus-client>=0.21.0",
-  "sentry-sdk[fastapi]>=2.19.0",
+  "sentry-sdk>=2.19.0",
   "python-multipart>=0.0.20",
 ]
 

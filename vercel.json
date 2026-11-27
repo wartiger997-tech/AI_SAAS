@@ -10,16 +10,12 @@
     "clause-api": {
       "root": "apps/contract-redliner/api",
       "framework": "fastapi",
-      "entrypoint": "main:app",
-      "installCommand": "pip install .",
-      "buildCommand": "python -c \"import main\""
+      "entrypoint": "main:app"
     },
     "relay-api": {
       "root": "apps/voice-receptionist/api",
       "framework": "fastapi",
-      "entrypoint": "main:app",
-      "installCommand": "pip install .",
-      "buildCommand": "python -c \"import main\""
+      "entrypoint": "main:app"
     }
   },
   "rewrites": [
@@ -42,23 +38,6 @@
       }
     }
   ],
-  "daemons": {
-    "receptionist-agent": {
-      "root": "apps/voice-receptionist/agent",
-      "entrypoint": "Dockerfile",
-      "instances": {
-        "iad1": 1
-      },
-      "bindings": [
-        {
-          "type": "service",
-          "service": "relay-api",
-          "format": "url",
-          "env": "RELAY_API_URL"
-        }
-      ]
-    }
-  },
   "headers": [
     {
       "source": "/(.*)",

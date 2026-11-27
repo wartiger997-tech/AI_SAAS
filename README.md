@@ -159,20 +159,15 @@ Import the repo with the default root (the repository root). `vercel.json` defin
 | `web` | Next.js | `/(.*)` | Review console |
 | `clause-api` | FastAPI | `/api/clause(.*)` | Direct browser uploads, no proxy body limit |
 | `relay-api` | FastAPI | `/api/relay(.*)` | Twilio webhooks + agent API |
-| `receptionist-agent` | daemon | internal | LiveKit worker, bound to `relay-api` |
 
-The agent declares a service binding:
-
-```json
-{ "type": "service", "service": "relay-api", "format": "url", "env": "RELAY_API_URL" }
-```
-
-The agent reads `RELAY_API_URL` first and falls back to `CONTROL_PLANE_URL` for
+The LiveKit agent is a long-running worker, so it runs on Render (or another
+container host), not as a Vercel request-based service. The agent reads
+`RELAY_API_URL` when present and falls back to `CONTROL_PLANE_URL` for
 local/Render. Both APIs mount their routers under `/v1` and under their public
 prefix (`/api/clause/v1`, `/api/relay/v1`), so the same code works behind Vercel
 and Render without path rewriting.
 
-Set these in Vercel (do **not** set `RELAY_API_URL`; Vercel injects it):
+Set these in Vercel (the agent is on Render, so set `CONTROL_PLANE_URL` there):
 
 | Variable | Value |
 |---|---|
