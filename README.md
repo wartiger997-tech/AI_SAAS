@@ -98,7 +98,7 @@ cd ../agent && pip install -e ".[dev]" && python -m receptionist_agent
 | DB | Postgres 16 + pgvector | FTS + vector in one store, tenant RLS-ready |
 | Queue | Redis + arq | Async-native, retries, no extra broker |
 | PDF | PyMuPDF + pdfplumber | Fast page-level text, real table extraction |
-| LLM | Provider-abstracted (OpenAI/Anthropic/Gemini) | No lock-in; JSON-schema validated |
+| LLM | OpenRouter free models by default, OpenAI-compatible fallback | No vendor lock-in; JSON-schema validated |
 | Search | FTS + vector + RRF | Keyword precision + semantic recall |
 | Voice | LiveKit Agents + Deepgram + ElevenLabs | Sub-500ms turn-taking, barge-in |
 | Telephony | Twilio SIP trunk | Programmable inbound/outbound |
@@ -181,7 +181,7 @@ Set these in Vercel (do **not** set `RELAY_API_URL`; Vercel injects it):
 | `CORS_ORIGINS` (clause-api) | `https://<your-vercel-domain>` |
 | `INTERNAL_API_TOKEN` (relay-api + agent) | same generated value |
 | `DATABASE_URL`, `REDIS_URL` | Vercel/Upstash or your Postgres/Redis |
-| `S3_*`, `OPENAI_API_KEY`, `TWILIO_*`, `LIVEKIT_*`, `DEEPGRAM_API_KEY`, `ELEVENLABS_API_KEY` | production secrets |
+| `S3_*`, `OPENROUTER_API_KEY`, `TWILIO_*`, `LIVEKIT_*`, `DEEPGRAM_API_KEY`, `ELEVENLABS_API_KEY` | production secrets |
 
 `NEXT_PUBLIC_*` values are inlined at build time. Changing them requires a
 Vercel redeploy.

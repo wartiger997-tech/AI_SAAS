@@ -57,10 +57,26 @@ async def entrypoint(ctx: JobContext) -> None:
     agent_config = context.get("agent") or {}
     greeting = business.get("greeting") or "Thanks for calling. How can I help you today?"
 
+    configured_model = str(agent_config.get("llm_model", ""))
+    if settings.openrouter_api_key:
+        llm_model = configured_model if "/" in configured_model else settings.openrouter_model
+        llm = openai.LLM(
+            model=llm_model,
+            api_key=settings.openrouter_api_key,
+            base_url=settings.openrouter_base_url,
+        )
+    else:
+        llm_kwargs: dict[str, Any] = {
+            "model": configured_model or settings.openai_model,
+        }
+        if settings.openai_api_key:
+            llm_kwargs["api_key"] = settings.openai_api_key
+        llm = openai.LLM(**llm_kwargs)
+
     state = CallState(call_id=api.call_id)
     session = AgentSession(
         stt=deepgram.STT(model=agent_config.get("stt_model", "nova-3")),
-        llm=openai.LLM(model=agent_config.get("llm_model", settings.openai_model)),
+        llm=llm,
         tts=elevenlabs.TTS(
             model=agent_config.get("tts_model", "eleven_turbo_v2_5"),
             voice_id=agent_config.get("voice_id", "21m00Tcm4TlvDq8ikWAM"),

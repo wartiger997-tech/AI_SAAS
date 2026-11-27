@@ -106,7 +106,7 @@ class AgentCreate(BaseModel):
     voice_id: str = Field(default="21m00Tcm4TlvDq8ikWAM", max_length=120)
     stt_model: str = Field(default="nova-3", max_length=80)
     tts_model: str = Field(default="eleven_turbo_v2_5", max_length=80)
-    llm_model: str = Field(default="gpt-4.1-mini", max_length=120)
+    llm_model: str = Field(default="baidu/ernie-5.5-flash-preview:free", max_length=120)
     prompt: str = Field(default="", max_length=12000)
 
 

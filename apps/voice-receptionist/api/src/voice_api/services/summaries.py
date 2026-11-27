@@ -85,13 +85,20 @@ async def summarize_call(
     transcript = transcript_text(turns)
     outcome = normalize_outcome(outcome_hint)
     summary = ""
-    if settings.openai_api_key and transcript:
+    api_key = settings.openrouter_api_key or settings.openai_api_key
+    base_url = settings.openrouter_base_url if settings.openrouter_api_key else None
+    model = settings.openrouter_model if settings.openrouter_api_key else settings.openai_model
+    if api_key and transcript:
         try:
             from openai import AsyncOpenAI
 
-            client = AsyncOpenAI(api_key=settings.openai_api_key, timeout=settings.llm_timeout_s)
+            client = AsyncOpenAI(
+                api_key=api_key,
+                base_url=base_url,
+                timeout=settings.llm_timeout_s,
+            )
             response = await client.chat.completions.create(
-                model=settings.openai_model,
+                model=model,
                 temperature=0,
                 response_format={"type": "json_object"},
                 messages=[

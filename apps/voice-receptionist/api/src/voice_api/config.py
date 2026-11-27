@@ -55,9 +55,16 @@ class Settings(BaseSettings):
     livekit_sip_uri: str = "sip:relay@sip.livekit.cloud;transport=tcp"
     agent_name: str = "relay-receptionist"
 
-    # Providers
+    # Providers — OpenRouter free models are the default.
     deepgram_api_key: str | None = None
     elevenlabs_api_key: str | None = None
+    llm_provider: Literal["openrouter", "openai", "stub"] = "openrouter"
+    openrouter_api_key: str | None = None
+    openrouter_base_url: str = "https://openrouter.ai/api/v1"
+    openrouter_model: str = "baidu/ernie-5.5-flash-preview:free"
+    openrouter_fallback_models: str = (
+        "google/gemma-4-31b-it:free,nvidia/nemotron-3.5-lightning:free"
+    )
     openai_api_key: str | None = None
     openai_model: str = "gpt-4.1-mini"
     llm_timeout_s: float = 20.0
@@ -122,6 +129,24 @@ class Settings(BaseSettings):
     @property
     def cors_origin_list(self) -> list[str]:
         return [origin.strip() for origin in self.cors_origins.split(",") if origin.strip()]
+
+    @property
+    def llm_configured(self) -> bool:
+        if self.llm_provider == "openrouter":
+            return bool(self.openrouter_api_key)
+        if self.llm_provider == "openai":
+            return bool(self.openai_api_key)
+        return False
+
+    @property
+    def openrouter_model_list(self) -> list[str]:
+        models = [self.openrouter_model]
+        models.extend(
+            model.strip()
+            for model in self.openrouter_fallback_models.split(",")
+            if model.strip() and model.strip() not in models
+        )
+        return models
 
     @property
     def twilio_configured(self) -> bool:

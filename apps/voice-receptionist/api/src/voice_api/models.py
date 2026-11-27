@@ -119,7 +119,9 @@ class AgentConfig(TimestampMixin, Base):
     )
     stt_model: Mapped[str] = mapped_column(String(80), default="nova-3", nullable=False)
     tts_model: Mapped[str] = mapped_column(String(80), default="eleven_turbo_v2_5", nullable=False)
-    llm_model: Mapped[str] = mapped_column(String(120), default="gpt-4.1-mini", nullable=False)
+    llm_model: Mapped[str] = mapped_column(
+        String(120), default="baidu/ernie-5.5-flash-preview:free", nullable=False
+    )
     prompt: Mapped[str] = mapped_column(Text, default="", nullable=False)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
 

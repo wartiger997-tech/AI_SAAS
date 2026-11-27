@@ -15,6 +15,9 @@ class AgentSettings:
     elevenlabs_api_key: str
     openai_api_key: str
     openai_model: str
+    openrouter_api_key: str
+    openrouter_base_url: str
+    openrouter_model: str
     control_plane_url: str
     control_plane_prefix: str
     internal_api_token: str
@@ -32,6 +35,9 @@ class AgentSettings:
             elevenlabs_api_key=os.getenv("ELEVENLABS_API_KEY", ""),
             openai_api_key=os.getenv("OPENAI_API_KEY", ""),
             openai_model=os.getenv("OPENAI_MODEL", "gpt-4.1-mini"),
+            openrouter_api_key=os.getenv("OPENROUTER_API_KEY", ""),
+            openrouter_base_url=os.getenv("OPENROUTER_BASE_URL", "https://openrouter.ai/api/v1"),
+            openrouter_model=os.getenv("OPENROUTER_MODEL", "baidu/ernie-5.5-flash-preview:free"),
             control_plane_url=(
                 os.getenv("RELAY_API_URL")
                 or os.getenv("CONTROL_PLANE_URL", "http://localhost:8001")

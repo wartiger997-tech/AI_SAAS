@@ -63,16 +63,40 @@ def _extract_json(raw: str) -> dict[str, Any]:
 
 
 class OpenAILLM:
-    def __init__(self) -> None:
+    """OpenAI-compatible chat client with optional model fallback."""
+
+    def __init__(
+        self,
+        *,
+        api_key: str | None,
+        base_url: str | None,
+        model: str,
+        fallback_models: list[str] | None = None,
+    ) -> None:
         from openai import AsyncOpenAI
 
         self._client = AsyncOpenAI(
-            api_key=settings.openai_api_key,
-            base_url=settings.openai_base_url,
+            api_key=api_key,
+            base_url=base_url,
             timeout=settings.llm_timeout_s,
             max_retries=2,
         )
-        self.model = settings.openai_model
+        self.models = [model, *(fallback_models or [])]
+        self.model = model
+
+    async def _create(self, **kwargs: Any) -> tuple[Any, str]:
+        last_error: Exception | None = None
+        for model in self.models:
+            try:
+                response = await self._client.chat.completions.create(model=model, **kwargs)
+                return response, model
+            except Exception as exc:  # noqa: BLE001 - try the next free model
+                last_error = exc
+                logger.warning(
+                    "llm model failed",
+                    extra={"context": {"model": model, "error": str(exc)}},
+                )
+        raise last_error or RuntimeError("no LLM model available")
 
     async def complete_json(
         self,
@@ -91,8 +115,7 @@ class OpenAILLM:
         ]
         last_error: Exception | None = None
         for _ in range(settings.llm_max_repair_attempts + 1):
-            response = await self._client.chat.completions.create(
-                model=self.model,
+            response, model = await self._create(
                 messages=messages,  # type: ignore[arg-type]
                 temperature=settings.llm_temperature,
                 max_tokens=max_tokens,
@@ -106,7 +129,7 @@ class OpenAILLM:
             try:
                 parsed = _extract_json(raw)
                 return schema.model_validate(parsed), LLMResult(
-                    output=parsed, usage=usage, model=self.model
+                    output=parsed, usage=usage, model=model
                 )
             except Exception as exc:  # noqa: BLE001
                 last_error = exc
@@ -124,8 +147,7 @@ class OpenAILLM:
     async def complete_text(
         self, system: str, user: str, max_tokens: int = 1024
     ) -> tuple[str, LLMResult]:
-        response = await self._client.chat.completions.create(
-            model=self.model,
+        response, model = await self._create(
             messages=[
                 {"role": "system", "content": system},
                 {"role": "user", "content": user},
@@ -138,72 +160,19 @@ class OpenAILLM:
             "prompt_tokens": response.usage.prompt_tokens if response.usage else 0,
             "completion_tokens": response.usage.completion_tokens if response.usage else 0,
         }
-        return text, LLMResult(output={"text": text}, usage=usage, model=self.model)
+        return text, LLMResult(output={"text": text}, usage=usage, model=model)
 
 
-class AnthropicLLM:
+class OpenRouterLLM(OpenAILLM):
+    """OpenRouter adapter. Defaults to free models and can fall back."""
+
     def __init__(self) -> None:
-        from anthropic import AsyncAnthropic
-
-        self._client = AsyncAnthropic(
-            api_key=settings.anthropic_api_key, timeout=settings.llm_timeout_s, max_retries=2
+        super().__init__(
+            api_key=settings.openrouter_api_key,
+            base_url=settings.openrouter_base_url,
+            model=settings.openrouter_model,
+            fallback_models=settings.openrouter_model_list[1:],
         )
-        self.model = settings.anthropic_model
-
-    async def complete_json(
-        self,
-        system: str,
-        user: str,
-        schema: type[T],
-        max_tokens: int = 4096,
-    ) -> tuple[T, LLMResult]:
-        schema_hint = json.dumps(schema.model_json_schema(), indent=2)
-        prompt = f"{user}\n\nReturn ONLY JSON matching this schema:\n{schema_hint}"
-        last_error: Exception | None = None
-        conversation = prompt
-        for _ in range(settings.llm_max_repair_attempts + 1):
-            response = await self._client.messages.create(
-                model=self.model,
-                max_tokens=max_tokens,
-                temperature=settings.llm_temperature,
-                system=system,
-                messages=[{"role": "user", "content": conversation}],
-            )
-            raw = "".join(
-                block.text for block in response.content if getattr(block, "type", "") == "text"
-            )
-            usage = {
-                "prompt_tokens": response.usage.input_tokens,
-                "completion_tokens": response.usage.output_tokens,
-            }
-            try:
-                parsed = _extract_json(raw)
-                return schema.model_validate(parsed), LLMResult(
-                    output=parsed, usage=usage, model=self.model
-                )
-            except Exception as exc:  # noqa: BLE001
-                last_error = exc
-                conversation += f"\n\nInvalid JSON: {exc}\nReturn corrected JSON only."
-        raise ValueError(f"Anthropic returned invalid JSON: {last_error}")
-
-    async def complete_text(
-        self, system: str, user: str, max_tokens: int = 1024
-    ) -> tuple[str, LLMResult]:
-        response = await self._client.messages.create(
-            model=self.model,
-            max_tokens=max_tokens,
-            temperature=settings.llm_temperature,
-            system=system,
-            messages=[{"role": "user", "content": user}],
-        )
-        text = "".join(
-            block.text for block in response.content if getattr(block, "type", "") == "text"
-        )
-        usage = {
-            "prompt_tokens": response.usage.input_tokens,
-            "completion_tokens": response.usage.output_tokens,
-        }
-        return text, LLMResult(output={"text": text}, usage=usage, model=self.model)
 
 
 class StubLLM:
@@ -254,10 +223,14 @@ def get_llm() -> BaseLLM:
     global _client
     if _client is not None:
         return _client
-    if settings.llm_provider == "openai" and settings.openai_api_key:
-        _client = OpenAILLM()
-    elif settings.llm_provider == "anthropic" and settings.anthropic_api_key:
-        _client = AnthropicLLM()
+    if settings.llm_provider == "openrouter" and settings.openrouter_api_key:
+        _client = OpenRouterLLM()
+    elif settings.llm_provider == "openai" and settings.openai_api_key:
+        _client = OpenAILLM(
+            api_key=settings.openai_api_key,
+            base_url=settings.openai_base_url,
+            model=settings.openai_model,
+        )
     else:
         logger.warning("no LLM credentials configured; using deterministic stub")
         _client = StubLLM()

@@ -54,7 +54,15 @@ services:
       - key: AWS_SECRET_ACCESS_KEY
         sync: false
       - key: LLM_PROVIDER
-        value: openai
+        value: openrouter
+      - key: OPENROUTER_API_KEY
+        sync: false
+      - key: OPENROUTER_BASE_URL
+        value: https://openrouter.ai/api/v1
+      - key: OPENROUTER_MODEL
+        value: baidu/ernie-5.5-flash-preview:free
+      - key: OPENROUTER_FALLBACK_MODELS
+        value: google/gemma-4-31b-it:free,nvidia/nemotron-3.5-lightning:free
       - key: OPENAI_API_KEY
         sync: false
       - key: OPENAI_MODEL
@@ -100,6 +108,8 @@ services:
       - key: AWS_ACCESS_KEY_ID
         sync: false
       - key: AWS_SECRET_ACCESS_KEY
+        sync: false
+      - key: OPENROUTER_API_KEY
         sync: false
       - key: OPENAI_API_KEY
         sync: false
@@ -153,6 +163,12 @@ services:
         sync: false
       - key: ELEVENLABS_API_KEY
         sync: false
+      - key: OPENROUTER_API_KEY
+        sync: false
+      - key: OPENROUTER_BASE_URL
+        value: https://openrouter.ai/api/v1
+      - key: OPENROUTER_MODEL
+        value: baidu/ernie-5.5-flash-preview:free
       - key: OPENAI_API_KEY
         sync: false
       - key: STORAGE_BACKEND
@@ -207,6 +223,8 @@ services:
         sync: false
       - key: BOOKING_LINK_BASE_URL
         value: https://relay-api.onrender.com
+      - key: OPENROUTER_API_KEY
+        sync: false
       - key: OPENAI_API_KEY
         sync: false
 
@@ -229,6 +247,12 @@ services:
         sync: false
       - key: ELEVENLABS_API_KEY
         sync: false
+      - key: OPENROUTER_API_KEY
+        sync: false
+      - key: OPENROUTER_BASE_URL
+        value: https://openrouter.ai/api/v1
+      - key: OPENROUTER_MODEL
+        value: baidu/ernie-5.5-flash-preview:free
       - key: OPENAI_API_KEY
         sync: false
       - key: CONTROL_PLANE_URL
