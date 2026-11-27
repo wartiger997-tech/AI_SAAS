@@ -2,20 +2,20 @@
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "services": {
     "web": {
-      "root": "apps/contract-redliner/web",
+      "root": "contract-redliner/web",
       "framework": "nextjs",
       "installCommand": "npm ci --no-audit --no-fund",
       "buildCommand": "npm run build"
     },
     "clause-api": {
-      "root": "apps/contract-redliner/api",
+      "root": "contract-redliner/api",
       "framework": "fastapi",
       "entrypoint": "redliner.main:app",
       "installCommand": "pip install .",
       "buildCommand": "python -c \"import redliner.main\""
     },
     "relay-api": {
-      "root": "apps/voice-receptionist/api",
+      "root": "voice-receptionist/api",
       "framework": "fastapi",
       "entrypoint": "voice_api.main:app",
       "installCommand": "pip install .",
@@ -44,7 +44,7 @@
   ],
   "daemons": {
     "receptionist-agent": {
-      "root": "apps/voice-receptionist/agent",
+      "root": "voice-receptionist/agent",
       "entrypoint": "Dockerfile",
       "instances": {
         "iad1": 1
@@ -63,26 +63,11 @@
     {
       "source": "/(.*)",
       "headers": [
-        {
-          "key": "X-Content-Type-Options",
-          "value": "nosniff"
-        },
-        {
-          "key": "X-Frame-Options",
-          "value": "DENY"
-        },
-        {
-          "key": "Referrer-Policy",
-          "value": "strict-origin-when-cross-origin"
-        },
-        {
-          "key": "Permissions-Policy",
-          "value": "camera=(), microphone=(), geolocation=()"
-        },
-        {
-          "key": "Strict-Transport-Security",
-          "value": "max-age=63072000; includeSubDomains; preload"
-        }
+        { "key": "X-Content-Type-Options", "value": "nosniff" },
+        { "key": "X-Frame-Options", "value": "DENY" },
+        { "key": "Referrer-Policy", "value": "strict-origin-when-cross-origin" },
+        { "key": "Permissions-Policy", "value": "camera=(), microphone=(), geolocation=()" },
+        { "key": "Strict-Transport-Security", "value": "max-age=63072000; includeSubDomains; preload" }
       ]
     }
   ]
