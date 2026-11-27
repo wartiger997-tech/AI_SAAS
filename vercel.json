@@ -10,16 +10,16 @@
     "clause-api": {
       "root": "apps/contract-redliner/api",
       "framework": "fastapi",
-      "entrypoint": "redliner.main:app",
+      "entrypoint": "main:app",
       "installCommand": "pip install .",
-      "buildCommand": "python -c \"import redliner.main\""
+      "buildCommand": "python -c \"import main\""
     },
     "relay-api": {
       "root": "apps/voice-receptionist/api",
       "framework": "fastapi",
-      "entrypoint": "voice_api.main:app",
+      "entrypoint": "main:app",
       "installCommand": "pip install .",
-      "buildCommand": "python -c \"import voice_api.main\""
+      "buildCommand": "python -c \"import main\""
     }
   },
   "rewrites": [
