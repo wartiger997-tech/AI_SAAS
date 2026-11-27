@@ -28,9 +28,11 @@ from voice_api.api.routers import (
 )
 from voice_api.config import get_settings
 from voice_api.db import dispose_engine
+from voice_api.metrics import observe_request
 from voice_api.observability import (
     configure_logging,
     get_logger,
+    init_error_tracking,
     new_request_id,
     request_id_var,
 )
@@ -42,6 +44,7 @@ logger = get_logger(__name__)
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     configure_logging()
+    init_error_tracking()
     logger.info("app.starting", extra={"context": {"env": settings.env}})
     yield
     await dispose_engine()
@@ -58,8 +61,16 @@ class RequestContextMiddleware(BaseHTTPMiddleware):
         except Exception:
             logger.exception("request.failed", extra={"context": {"path": request.url.path}})
             raise
+        duration = time.perf_counter() - started
         response.headers["X-Request-ID"] = request_id
-        response.headers["X-Response-Time-ms"] = str(int((time.perf_counter() - started) * 1000))
+        response.headers["X-Response-Time-ms"] = str(int(duration * 1000))
+        route = request.scope.get("route")
+        observe_request(
+            request.method,
+            getattr(route, "path", request.url.path),
+            response.status_code,
+            duration,
+        )
         return response
 
 
@@ -104,18 +115,26 @@ def create_app() -> FastAPI:
             "telephony_configured": settings.telephony_configured,
         }
 
-    prefix = settings.api_prefix
+    prefixes = [settings.api_prefix]
+    if settings.public_api_prefix and settings.public_api_prefix not in prefixes:
+        prefixes.append(settings.public_api_prefix)
+
     app.include_router(health.router)
-    app.include_router(auth.router, prefix=prefix)
-    app.include_router(businesses.router, prefix=prefix)
-    app.include_router(agents.router, prefix=prefix)
-    app.include_router(numbers.router, prefix=prefix)
-    app.include_router(calls.router, prefix=prefix)
-    app.include_router(availability.router, prefix=prefix)
-    app.include_router(bookings.router, prefix=prefix)
-    app.include_router(knowledge.router, prefix=prefix)
-    app.include_router(internal.router, prefix=prefix)
-    app.include_router(webhooks.router, prefix=prefix)
+    for prefix in prefixes:
+        app.include_router(health.router, prefix=prefix, include_in_schema=False)
+
+    for prefix in prefixes:
+        primary = prefix == settings.api_prefix
+        app.include_router(auth.router, prefix=prefix, include_in_schema=primary)
+        app.include_router(businesses.router, prefix=prefix, include_in_schema=primary)
+        app.include_router(agents.router, prefix=prefix, include_in_schema=primary)
+        app.include_router(numbers.router, prefix=prefix, include_in_schema=primary)
+        app.include_router(calls.router, prefix=prefix, include_in_schema=primary)
+        app.include_router(availability.router, prefix=prefix, include_in_schema=primary)
+        app.include_router(bookings.router, prefix=prefix, include_in_schema=primary)
+        app.include_router(knowledge.router, prefix=prefix, include_in_schema=primary)
+        app.include_router(internal.router, prefix=prefix, include_in_schema=primary)
+        app.include_router(webhooks.router, prefix=prefix, include_in_schema=primary)
     return app
 
 

@@ -15,18 +15,32 @@ class Settings(BaseSettings):
     env: Literal["dev", "staging", "prod"] = "dev"
     app_name: str = "Relay Receptionist API"
     api_prefix: str = "/v1"
+    public_api_prefix: str = "/api/relay/v1"
 
     database_url: str = "postgresql+asyncpg://relay:relay@localhost:5432/relay"
     db_pool_size: int = 10
     db_max_overflow: int = 20
     db_echo: bool = False
+    db_pool_recycle: int = 1800
+    db_statement_timeout_ms: int = 30_000
 
     redis_url: str = "redis://localhost:6379/1"
+
+    # Abuse control
+    rate_limit_enabled: bool = False
+    rate_limit_per_minute: int = 120
+    rate_limit_burst: int = 20
 
     jwt_secret: str = Field(default="dev-only-change-me", min_length=8)
     jwt_algorithm: str = "HS256"
     jwt_ttl_minutes: int = 60 * 12
     internal_api_token: str = Field(default="dev-internal-token", min_length=8)
+    auth_lockout_threshold: int = 5
+    auth_lockout_minutes: int = 15
+    email_verification_required: bool = False
+    mfa_required: bool = False
+    email_from: str = "no-reply@relay.local"
+    smtp_url: str | None = None
 
     # Telephony
     twilio_account_sid: str | None = None
@@ -64,6 +78,18 @@ class Settings(BaseSettings):
     aws_access_key_id: str | None = None
     aws_secret_access_key: str | None = None
 
+    # Cache
+    cache_enabled: bool = True
+    cache_ttl_seconds: int = 30
+
+    # Billing / quotas
+    billing_enabled: bool = False
+    plan_limits: dict[str, int] = {
+        "trial": 100,
+        "pro": 5_000,
+        "enterprise": 1_000_000,
+    }
+
     # Retention / safety
     transcript_retention_days: int = 90
     recording_retention_days: int = 30
@@ -77,6 +103,9 @@ class Settings(BaseSettings):
     langfuse_public_key: str | None = None
     langfuse_secret_key: str | None = None
     langfuse_host: str = "https://cloud.langfuse.com"
+    sentry_dsn: str | None = None
+    sentry_traces_sample_rate: float = 0.1
+    metrics_enabled: bool = True
 
     cors_origins: str = "http://localhost:3000"
 

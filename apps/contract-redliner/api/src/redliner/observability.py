@@ -145,3 +145,28 @@ def trace_generation(name: str, model: str, **metadata: Any) -> Any:
         return wrapper  # type: ignore[return-value]
 
     return decorator
+
+
+_sentry_ready = False
+
+
+def init_error_tracking() -> None:
+    """Initialize Sentry when a DSN is configured. Never raises."""
+    global _sentry_ready
+    if _sentry_ready:
+        return
+    _sentry_ready = True
+    if not settings.sentry_dsn:
+        return
+    try:
+        import sentry_sdk
+
+        sentry_sdk.init(
+            dsn=settings.sentry_dsn,
+            environment=settings.env,
+            traces_sample_rate=settings.sentry_traces_sample_rate,
+            profiles_sample_rate=0.0,
+            send_default_pii=False,
+        )
+    except Exception:  # pragma: no cover - telemetry must never break the app
+        get_logger(__name__).debug("sentry initialization failed", exc_info=True)

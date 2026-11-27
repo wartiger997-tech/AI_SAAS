@@ -19,21 +19,35 @@ class Settings(BaseSettings):
     env: Literal["dev", "staging", "prod"] = "dev"
     app_name: str = "ClauseGuard API"
     api_prefix: str = "/v1"
+    public_api_prefix: str = "/api/clause/v1"
 
     # Database
     database_url: str = "postgresql+asyncpg://redliner:redliner@localhost:5432/redliner"
     db_pool_size: int = 10
     db_max_overflow: int = 20
     db_echo: bool = False
+    db_pool_recycle: int = 1800
+    db_statement_timeout_ms: int = 30_000
 
     # Redis / queue
     redis_url: str = "redis://localhost:6379/0"
+
+    # Abuse control
+    rate_limit_enabled: bool = False
+    rate_limit_per_minute: int = 120
+    rate_limit_burst: int = 20
 
     # Auth
     jwt_secret: str = Field(default="dev-only-change-me", min_length=8)
     jwt_algorithm: str = "HS256"
     jwt_ttl_minutes: int = 60 * 12
     api_key_prefix: str = "cg_live_"
+    auth_lockout_threshold: int = 5
+    auth_lockout_minutes: int = 15
+    email_verification_required: bool = False
+    mfa_required: bool = False
+    email_from: str = "no-reply@clauseguard.local"
+    smtp_url: str | None = None
 
     # Uploads
     max_upload_mb: int = 100
@@ -73,12 +87,34 @@ class Settings(BaseSettings):
     rrf_k: int = 60
     hybrid_limit: int = 20
 
+    # Cache
+    cache_enabled: bool = True
+    cache_ttl_seconds: int = 60
+    embedding_cache_ttl_seconds: int = 86_400
+
+    # Quality / cost budgets
+    citation_validation_enabled: bool = True
+    max_tokens_per_document: int = 200_000
+    target_review_seconds: int = 180
+    cost_alert_usd: float = 0.40
+
     # Observability
     log_level: str = "INFO"
     log_json: bool = True
     langfuse_public_key: str | None = None
     langfuse_secret_key: str | None = None
     langfuse_host: str = "https://cloud.langfuse.com"
+    sentry_dsn: str | None = None
+    sentry_traces_sample_rate: float = 0.1
+    metrics_enabled: bool = True
+
+    # Billing / quotas
+    billing_enabled: bool = False
+    plan_limits: dict[str, int] = {
+        "trial": 10,
+        "pro": 500,
+        "enterprise": 100_000,
+    }
 
     # CORS
     cors_origins: str = "http://localhost:3000"

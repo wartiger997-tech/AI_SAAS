@@ -9,6 +9,7 @@ from sqlalchemy import text
 
 from voice_api.config import get_settings
 from voice_api.db import engine
+from voice_api.metrics import render_metrics
 from voice_api.schemas import HealthResponse
 
 router = APIRouter(tags=["health"])
@@ -18,6 +19,12 @@ settings = get_settings()
 @router.get("/healthz", response_model=HealthResponse)
 async def healthz() -> HealthResponse:
     return HealthResponse(status="ok", version="0.1.0")
+
+
+@router.get("/metrics", include_in_schema=False)
+async def metrics() -> Response:
+    data, content_type = render_metrics()
+    return Response(content=data, media_type=content_type)
 
 
 @router.get("/readyz", response_model=HealthResponse)

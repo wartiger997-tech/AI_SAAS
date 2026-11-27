@@ -15,6 +15,8 @@ def test_root_and_health() -> None:
         health = client.get("/healthz")
         assert health.status_code == 200
         assert health.json()["status"] == "ok"
+        assert client.get("/api/relay/v1/healthz").status_code == 200
+        assert client.get("/metrics").status_code == 200
 
 
 def test_openapi_lists_routes() -> None:

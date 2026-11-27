@@ -108,3 +108,28 @@ def trace_span(name: str, **metadata: Any) -> Iterator[dict[str, Any]]:
             with suppress(Exception):
                 obs.end()
         get_logger("trace").info("span", extra={"context": span})
+
+
+_sentry_ready = False
+
+
+def init_error_tracking() -> None:
+    """Initialize Sentry when a DSN is configured. Never raises."""
+    global _sentry_ready
+    if _sentry_ready:
+        return
+    _sentry_ready = True
+    if not settings.sentry_dsn:
+        return
+    try:
+        import sentry_sdk
+
+        sentry_sdk.init(
+            dsn=settings.sentry_dsn,
+            environment=settings.env,
+            traces_sample_rate=settings.sentry_traces_sample_rate,
+            profiles_sample_rate=0.0,
+            send_default_pii=False,
+        )
+    except Exception:  # pragma: no cover - telemetry must never break the app
+        get_logger(__name__).debug("sentry initialization failed", exc_info=True)

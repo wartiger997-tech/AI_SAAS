@@ -50,6 +50,7 @@ async def entrypoint(ctx: JobContext) -> None:
         base_url=settings.control_plane_url,
         token=settings.internal_api_token,
         business_id=settings.fallback_business_id,
+        api_prefix=settings.control_plane_prefix,
     )
     context = await _load_context(ctx, api)
     business = context.get("business") or {}

@@ -35,8 +35,16 @@ class CallState:
 
 
 class ControlPlaneClient:
-    def __init__(self, base_url: str, token: str, business_id: str, call_id: str = "") -> None:
+    def __init__(
+        self,
+        base_url: str,
+        token: str,
+        business_id: str,
+        call_id: str = "",
+        api_prefix: str = "/v1",
+    ) -> None:
         self.base_url = base_url.rstrip("/")
+        self.api_prefix = "/" + api_prefix.strip("/") if api_prefix.strip("/") else ""
         self.token = token
         self.business_id = business_id
         self.call_id = call_id
@@ -58,7 +66,9 @@ class ControlPlaneClient:
         return response.json()
 
     async def context(self) -> dict[str, Any]:
-        data = await self._request("GET", f"/v1/internal/context?business_id={self.business_id}")
+        data = await self._request(
+            "GET", f"{self.api_prefix}/internal/context?business_id={self.business_id}"
+        )
         if not self.call_id:
             self.call_id = str(data.get("call", {}).get("id", ""))
         return data
@@ -67,7 +77,7 @@ class ControlPlaneClient:
         params = {"business_id": self.business_id, "date": date, "days": 3}
         if service:
             params["service"] = service
-        data = await self._request("GET", "/v1/internal/availability", params=params)
+        data = await self._request("GET", f"{self.api_prefix}/internal/availability", params=params)
         return list(data.get("slots", []))
 
     async def book(
@@ -85,11 +95,11 @@ class ControlPlaneClient:
             "contact_phone": contact_phone,
             "call_id": self.call_id or None,
         }
-        return await self._request("POST", "/v1/internal/bookings", json=payload)
+        return await self._request("POST", f"{self.api_prefix}/internal/bookings", json=payload)
 
     async def knowledge(self, query: str) -> list[dict[str, Any]]:
         data = await self._request(
-            "GET", "/v1/internal/knowledge", params={"business_id": self.business_id}
+            "GET", f"{self.api_prefix}/internal/knowledge", params={"business_id": self.business_id}
         )
         needle = query.lower()
         hits = []
@@ -106,7 +116,7 @@ class ControlPlaneClient:
             return
         await self._request(
             "POST",
-            f"/v1/internal/calls/{self.call_id}/turns",
+            f"{self.api_prefix}/internal/calls/{self.call_id}/turns",
             json={"role": role, "content": redact_pii(content)[:4000]},
         )
 
@@ -115,7 +125,7 @@ class ControlPlaneClient:
             return
         await self._request(
             "POST",
-            f"/v1/internal/calls/{self.call_id}/finish",
+            f"{self.api_prefix}/internal/calls/{self.call_id}/finish",
             json={"outcome": normalize_outcome(outcome), "summary": summary[:4000]},
         )
 

@@ -16,6 +16,7 @@ class AgentSettings:
     openai_api_key: str
     openai_model: str
     control_plane_url: str
+    control_plane_prefix: str
     internal_api_token: str
     agent_name: str
     fallback_business_id: str
@@ -31,7 +32,11 @@ class AgentSettings:
             elevenlabs_api_key=os.getenv("ELEVENLABS_API_KEY", ""),
             openai_api_key=os.getenv("OPENAI_API_KEY", ""),
             openai_model=os.getenv("OPENAI_MODEL", "gpt-4.1-mini"),
-            control_plane_url=os.getenv("CONTROL_PLANE_URL", "http://localhost:8001").rstrip("/"),
+            control_plane_url=(
+                os.getenv("RELAY_API_URL")
+                or os.getenv("CONTROL_PLANE_URL", "http://localhost:8001")
+            ).rstrip("/"),
+            control_plane_prefix=os.getenv("RELAY_API_PREFIX", "/v1"),
             internal_api_token=os.getenv("INTERNAL_API_TOKEN", ""),
             agent_name=os.getenv("AGENT_NAME", "relay-receptionist"),
             fallback_business_id=os.getenv("RELAY_BUSINESS_ID", ""),

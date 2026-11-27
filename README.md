@@ -143,51 +143,64 @@ Observability (Langfuse/OTel, Prometheus, Grafana) is behind a compose profile:
 docker compose -f infra/docker-compose.yml --profile observability up -d otel-collector prometheus grafana
 ```
 
-## Deployment — Vercel + Render
+## Deployment — Vercel Services + Render
 
-The frontend deploys to Vercel; both APIs, workers, the LiveKit agent, Postgres,
-and Redis deploy to Render from the root `render.yaml` Blueprint.
+The repository can deploy as **one Vercel project with multiple services**, or as
+a Render Blueprint. The Vercel path is the lowest-latency option: the browser
+talks directly to the FastAPI services, and the LiveKit agent runs as a Vercel
+daemon with a private service binding.
 
-### 1. Render (backend)
+### Vercel (recommended)
 
-1. Push the repo to GitHub.
-2. In Render: **New → Blueprint** → select the repo.
-3. Fill in every `sync: false` secret (Twilio, LiveKit, Deepgram, ElevenLabs,
-   OpenAI, S3/R2, Langfuse).
-4. The Blueprint creates:
-   - `clauseguard-api` + `clauseguard-worker` + `clauseguard-db` + Redis
-   - `relay-api` + `relay-worker` + `relay-agent` + `relay-db` + Redis
-5. `initialDeployHook` runs `alembic upgrade head` for both APIs.
+`vercel.json` defines:
 
-### 2. Vercel (frontend)
+| Service | Type | Public path | Notes |
+|---|---|---|---|
+| `web` | Next.js | `/(.*)` | Review console |
+| `clause-api` | FastAPI | `/api/clause(.*)` | Direct browser uploads, no proxy body limit |
+| `relay-api` | FastAPI | `/api/relay(.*)` | Twilio webhooks + agent API |
+| `receptionist-agent` | daemon | internal | LiveKit worker, bound to `relay-api` |
 
-**Option A — recommended:** import the repo, set **Root Directory** to
-`apps/contract-redliner/web`. Vercel detects Next.js and uses
-`apps/contract-redliner/web/vercel.json`.
+The agent declares a service binding:
 
-**Option B — repo root:** the root `vercel.json` builds the web app from the
-monorepo root.
+```json
+{ "type": "service", "service": "relay-api", "format": "url", "env": "RELAY_API_URL" }
+```
 
-Set these environment variables in Vercel:
+The agent reads `RELAY_API_URL` first and falls back to `CONTROL_PLANE_URL` for
+local/Render. Both APIs mount their routers under `/v1` and under their public
+prefix (`/api/clause/v1`, `/api/relay/v1`), so the same code works behind Vercel
+and Render without path rewriting.
+
+Set these in Vercel (do **not** set `RELAY_API_URL`; Vercel injects it):
 
 | Variable | Value |
 |---|---|
-| `NEXT_PUBLIC_API_URL` | `https://clauseguard-api.onrender.com` |
-| `NEXT_PUBLIC_SITE_URL` | `https://clauseguard-web.vercel.app` |
+| `NEXT_PUBLIC_API_URL` | `/api/clause` |
+| `NEXT_PUBLIC_SITE_URL` | `https://<your-vercel-domain>` |
+| `CORS_ORIGINS` (clause-api) | `https://<your-vercel-domain>` |
+| `INTERNAL_API_TOKEN` (relay-api + agent) | same generated value |
+| `DATABASE_URL`, `REDIS_URL` | Vercel/Upstash or your Postgres/Redis |
+| `S3_*`, `OPENAI_API_KEY`, `TWILIO_*`, `LIVEKIT_*`, `DEEPGRAM_API_KEY`, `ELEVENLABS_API_KEY` | production secrets |
 
-Then set `CORS_ORIGINS` on the Render `clauseguard-api` service to the Vercel
-URL and redeploy. `NEXT_PUBLIC_*` values are inlined at build time, so changing
-them requires a Vercel redeploy.
+`NEXT_PUBLIC_*` values are inlined at build time. Changing them requires a
+Vercel redeploy.
 
-### 3. Post-deploy checklist
+### Render (alternative)
 
-- `GET /healthz` and `/readyz` return `ok` on both APIs.
-- Render Postgres has the `vector` extension (ClauseGuard migration creates it).
+Import the repo as a Blueprint. `render.yaml` creates `clauseguard-api`,
+`relay-api`, both workers, the LiveKit agent, Postgres, and Key Value. Set the
+same secrets in Render. `preDeployCommand` runs `alembic upgrade head`.
+
+### Post-deploy checklist
+
+- `GET /api/clause/v1/healthz` and `/api/relay/v1/healthz` return `ok`.
+- `GET /metrics` returns Prometheus metrics on both APIs.
+- Postgres has the `vector` extension (ClauseGuard migration creates it).
 - S3/R2 bucket exists and credentials can read/write.
-- Twilio webhook URLs point at `https://relay-api.onrender.com/v1/webhooks/twilio/...`.
-- LiveKit SIP trunk points at the Relay agent worker.
-- Vercel preview deployments get their own `NEXT_PUBLIC_API_URL` if you want
-  isolated API environments.
+- Twilio webhook URLs point at `https://<domain>/api/relay/v1/webhooks/twilio/...`.
+- LiveKit SIP trunk points at the Relay agent daemon/worker.
+- Vercel preview deployments get isolated `NEXT_PUBLIC_API_URL` values if needed.
 
 ## License
 
