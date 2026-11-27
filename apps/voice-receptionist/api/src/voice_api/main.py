@@ -101,6 +101,22 @@ def create_app() -> FastAPI:
         response.headers.setdefault("Referrer-Policy", "strict-origin-when-cross-origin")
         return response
 
+    @app.exception_handler((ConnectionRefusedError, TimeoutError, OSError))
+    async def dependency_unavailable(request: Request, exc: OSError):
+        logger.error(
+            "dependency.unavailable",
+            extra={"context": {"path": request.url.path, "error": str(exc)}},
+        )
+        return JSONResponse(
+            status_code=503,
+            content={
+                "detail": (
+                    "A required dependency is unavailable. Check DATABASE_URL, REDIS_URL, "
+                    "and object-storage configuration."
+                )
+            },
+        )
+
     @app.exception_handler(RequestValidationError)
     async def validation_handler(request: Request, exc: RequestValidationError):
         return JSONResponse(status_code=422, content={"detail": exc.errors(), "body": exc.body})
